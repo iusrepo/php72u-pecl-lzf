@@ -1,22 +1,28 @@
 %global pecl_name LZF
 %global ini_name  40-lzf.ini
+%global php       php72u
 
-Name:           php-pecl-lzf
+Name:           %{php}-pecl-lzf
 Version:        1.6.7
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Extension to handle LZF de/compression
 License:        PHP
 URL:            https://pecl.php.net/package/%{pecl_name}
 Source0:        https://pecl.php.net/get/%{pecl_name}-%{version}.tgz
 
-BuildRequires:  php-devel
-BuildRequires:  php-pear >= 1:1.4.0
+BuildRequires:  %{php}-devel
+BuildRequires:  pear1 %{php}-cli %{php}-common %{php}-xml
 BuildRequires:  liblzf-devel
 Requires:       php(zend-abi) = %{php_zend_api}
 Requires:       php(api) = %{php_core_api}
 
 Provides:       php-pecl(%{pecl_name}) = %{version}
 Provides:       php-pecl(%{pecl_name})%{?_isa} = %{version}
+
+# safe replacement
+Provides:       php-pecl-%{pecl_name} = %{version}-%{release}
+Provides:       php-pecl-%{pecl_name}%{?_isa} = %{version}-%{release}
+Conflicts:      php-pecl-%{pecl_name} < %{version}-%{release}
 
 
 %description
@@ -49,7 +55,7 @@ phpize
 make -C %{pecl_name}-%{version} install INSTALL_ROOT=%{buildroot}
 install -D -p -m 644 %{ini_name} %{buildroot}%{php_inidir}/%{ini_name}
 
-install -D -p -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{name}.xml
+install -D -p -m 644 package.xml %{buildroot}%{pecl_xmldir}/%{pecl_name}.xml
 
 for i in $(grep 'role="doc"' package.xml | sed -e 's/^.*name="//;s/".*$//')
 do install -D -p -m 644 %{pecl_name}-%{version}/$i %{buildroot}%{pecl_docdir}/%{pecl_name}/$i
@@ -66,15 +72,36 @@ NO_INTERACTION=1 \
     -d extension=%{buildroot}%{php_extdir}/lzf.so
 
 
+%triggerin -- pear1
+if [ -x %{__pecl} ]; then
+    %{pecl_install} %{pecl_xmldir}/%{pecl_name}.xml >/dev/null || :
+fi
+
+
+%posttrans
+if [ -x %{__pecl} ]; then
+    %{pecl_install} %{pecl_xmldir}/%{pecl_name}.xml >/dev/null || :
+fi
+
+
+%postun
+if [ $1 -eq 0 -a -x %{__pecl} ]; then
+    %{pecl_uninstall} %{pecl_name} >/dev/null || :
+fi
+
+
 %files
 %license %{pecl_name}-%{version}/LICENSE
 %doc %{pecl_docdir}/%{pecl_name}
 %config(noreplace) %{php_inidir}/%{ini_name}
 %{php_extdir}/lzf.so
-%{pecl_xmldir}/%{name}.xml
+%{pecl_xmldir}/%{pecl_name}.xml
 
 
 %changelog
+* Thu May 30 2019 Carl George <carl@george.computer> - 1.6.7-2
+- Port from Fedora to IUS
+
 * Thu May 30 2019 Carl George <carl@george.computer> - 1.6.7-1
 - Latest upstream
 
